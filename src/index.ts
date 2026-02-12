@@ -43,9 +43,22 @@ export default {
 		env: Env,
 		_ctx: ExecutionContext,
 	) {
+		const values = await Promise.all([
+			env.STATE.get("lastDailyCount"),
+			env.STATE.get("number")
+		])
+		const [lastDailyCount, number] = values.map(value => value ? parseInt(value) : null);
+		if (!number) return;
+		await env.STATE.put("lastDailyCount", number.toString())
+		let message = "Daily report placeholder";
+		if (lastDailyCount) {
+			message = `Today, we went from ${numberToString(lastDailyCount)} \
+(${lastDailyCount}) to ${numberToString(number)} (${number}). That's a total \
+of +${number - lastDailyCount}.`
+		}
 		await client.chat.postMessage({
 			channel: env.CHANNEL,
-			text: "Daily report placeholder",
+			text: message,
 		});
 	},
 
