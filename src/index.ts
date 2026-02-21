@@ -1,6 +1,7 @@
 import { WebClient } from "@slack/web-api";
 import { env } from "cloudflare:workers";
 import { SlackApp } from "slack-cloudflare-workers";
+import { State } from "./state";
 
 type Awaitable<T> = Promise<T> | T;
 
@@ -43,18 +44,23 @@ export default {
 		env: Env,
 		_ctx: ExecutionContext,
 	) {
-		const values = await Promise.all([
-			env.STATE.get("lastDailyCount"),
-			env.STATE.get("number")
+		const state = new State(env.STATE);
+		const [lastDailyCount, number] = await Promise.all([
+			state.get("lastDailyCount"),
+			state.get("number")
 		])
-		const [lastDailyCount, number] = values.map(value => value ? parseInt(value) : null);
 		if (!number) return;
-		await env.STATE.put("lastDailyCount", number.toString())
-		let message = "Daily report placeholder";
+		await state.put("lastDailyCount", number)
+		let message = "Daily report coming tomorrow";
 		if (lastDailyCount) {
-			message = `Today, we went from ${numberToString(lastDailyCount)} \
-(${lastDailyCount}) to ${numberToString(number)} (${number}). That's a total \
-of +${number - lastDailyCount}.`
+			if (number == lastDailyCount) {
+				message = "No progress today :("
+			} else {
+				message = `Today, we went from \
+${numberToString(lastDailyCount)} (${lastDailyCount}) to \
+${numberToString(number)} (${number}). That's a total of \
++${number - lastDailyCount}.`
+			}
 		}
 		await client.chat.postMessage({
 			channel: env.CHANNEL,
@@ -67,6 +73,7 @@ of +${number - lastDailyCount}.`
         env: Env,
         ctx: ExecutionContext
     ): Promise<Response> {
+		const state = new State(env.STATE);
         const app = new SlackApp({ env })
 			.message(countRegex, async ({ payload: message }) => {
 				if (message.channel != env.CHANNEL) return;
@@ -75,13 +82,14 @@ of +${number - lastDailyCount}.`
 				if (!match) return;
 				const count = stringToNumber(match[1]);
 				console.log("Count:", count);
-				let numberText: Awaitable<string | null> = env.STATE.get("number");
-				const lastCounter = env.STATE.get("lastCounter");
-				if (!(await numberText)) {
-					await env.STATE.put("number", "0");
-					numberText = "0";
+				let number: Awaitable<number | null> = state.get("number");
+				const lastCounter = state.get("lastCounter");
+				let setNumber = false;
+				if (!(await number)) {
+					setNumber = true;
+					number = 0;
 				}
-				const number = parseInt(await numberText as string);
+				number = await number as number;
 				console.log("Number:", number);
 				let correct = true;
 				const promises: Promise<unknown>[] = [];
@@ -100,9 +108,13 @@ of +${number - lastDailyCount}.`
 					}));
 					correct = false;
 				}
-				if (correct) {
-					promises.push(env.STATE.put("number", count.toString()));
-					promises.push(env.STATE.put("lastCounter", message.user));
+				if (correct) {;
+					promises.push(state.updateObject({
+						number: count,
+						lastCounter: message.user,
+					}));
+				} else if(setNumber) {
+					promises.push(state.put("number", 0));
 				}
 				await client.reactions.add({
 					channel: message.channel,
@@ -122,10 +134,10 @@ of +${number - lastDailyCount}.`
 				} catch(err) {
 					return "Error decoding"
 				}
-				await Promise.all([
-					env.STATE.put("number", (number - 1).toString()),
-					env.STATE.delete("lastCounter"),
-				]);
+				await state.updateObject({
+					number: number - 1,
+					lastCounter: null,
+				});
 				await client.chat.postMessage({
 					channel: command.channel_id,
 					text: `<@${command.user_id}> set the next number to ${command.text}`
