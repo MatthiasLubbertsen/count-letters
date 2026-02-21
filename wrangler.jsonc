@@ -11,7 +11,8 @@
 		"enabled": true
 	},
 	"vars": {
-		"CHANNEL": "C0ABDRFADGA"
+		"CHANNEL": "C0ABDRFADGA",
+		"ADMINS": "U0A55A4B21K,U09EFB5G6TS"
 	},
 	"triggers": {
 		"crons": [
