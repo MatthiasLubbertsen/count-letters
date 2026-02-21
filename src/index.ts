@@ -113,7 +113,7 @@ of +${number - lastDailyCount}.`
 			})
 			.command("/set-next", async ({ payload: command }) => {
 				console.log(command);
-				if (env.ADMINS.split(",").includes(command.user_id)) {
+				if (!env.ADMINS.split(",").includes(command.user_id)) {
 					return "You do not have permission to run this command";
 				}
 				let number: number;
