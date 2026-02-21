@@ -92,6 +92,11 @@ export default {
 			.afterAuthorize(async ({ context }) => {
 				if (context.channelId !== env.CHANNEL) {
 					console.log(`Ignoring channel: ${context.channelId}`);
+					if (context.channelId) {
+						await client.conversations.leave({
+							channel: context.channelId
+						});
+					}
 					return {};
 				}
 			})
