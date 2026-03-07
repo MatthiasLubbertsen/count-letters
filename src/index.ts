@@ -159,7 +159,7 @@ export default {
 						channel: message.channel,
 						user: message.user,
 						text: template("wrong", {
-							correction: numberToString(number),
+							correction: numberToString(number + 1),
 						}),
 					}));
 					correct = false;
