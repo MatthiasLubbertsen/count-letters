@@ -130,6 +130,15 @@ export default {
 					text: template("welcome"),
 				})
 			})
+			.event("message", async ({ payload: message }) => {
+				if (message.subtype !== "message_deleted") return;
+				if (message.ts !== await state.get("lastMessageTs")) return;
+				const next = await state.get("number");
+				await client.chat.postMessage({
+					channel: message.channel,
+					text: template("deleted", { next: numberToString(next! + 1) })
+				})
+			})
 			.message(countRegex, async ({ payload: message }) => {
 				if (message.thread_ts || message.subtype) return;
 				const match = message.text.match(countRegex);
@@ -168,6 +177,7 @@ export default {
 					promises.push(state.updateObject({
 						number: count,
 						lastCounter: message.user,
+						lastMessageTs: message.ts,
 					}));
 				} else if(setNumber) {
 					promises.push(state.put("number", 0));

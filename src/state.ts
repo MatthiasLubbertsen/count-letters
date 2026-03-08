@@ -1,33 +1,39 @@
 const keyTypes = {
     number: "number",
-    lastCounter: "nullableString",
+    lastCounter: "string",
     lastDailyCount: "number",
+    lastMessageTs: "string",
 } as const;
 type KeyTypes = typeof keyTypes;
 
 type TypeMap = {
     number: number;
-    nullableString: string | null;
+    string: string;
 }
 
 export type StateObject = {
-    -readonly [K in keyof KeyTypes]: TypeMap[KeyTypes[K]]
+    -readonly [K in keyof KeyTypes]: TypeMap[KeyTypes[K]] | null;
 };
 
 export class State {
     db: KVNamespace;
+    private objectPromise: Promise<Partial<StateObject>> | null = null;
 
     constructor(db: KVNamespace) {
         this.db = db;
     }
 
     async getObject() {
-        const result = await this.db
-            .get<Partial<StateObject>>("state", "json");
-        return result ?? {}
+        if (!this.objectPromise) {
+            this.objectPromise = this.db
+                .get<Partial<StateObject>>("state", "json")
+                .then(result => result ?? {});
+        }
+        return this.objectPromise;
     }
 
     async putObject(value: Partial<StateObject>) {
+        this.objectPromise = Promise.resolve(value);
         return this.db.put("state", JSON.stringify(value))
     }
 

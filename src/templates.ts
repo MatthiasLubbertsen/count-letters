@@ -10,7 +10,8 @@ export const templates = {
 ({{number}}) for a total of +{{difference}}. At this rate, we'll reach {{goal}} in {{goalDays}} days.",
     noProgress: "No progress today :heavysob:",
     noPerm: "You don't have permissions to do that, little hacker :hack:",
-    numberSet: "<@{{userId}}> set the next number to {{text}}."
+    numberSet: "<@{{userId}}> set the next number to {{text}}.",
+    deleted: "The latest message was deleted! Continue counting from {{next}}."
 } as const satisfies Record<string, string>;
 
 export type Templates = typeof templates;
@@ -29,6 +30,7 @@ export type TemplateParams = Extends<
             "goalDays",
         ];
         numberSet: ["userId", "text"];
+        deleted: ["next"];
     }
 >
 
