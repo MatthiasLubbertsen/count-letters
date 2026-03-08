@@ -112,7 +112,8 @@ export default {
     ): Promise<Response> {
 		const state = new State(env.STATE);
         const app = new SlackApp({ env })
-			.afterAuthorize(async ({ context }) => {
+			.afterAuthorize(async payload => {
+				const context = payload.context;
 				if (context.channelId !== env.CHANNEL) {
 					console.log(`Ignoring channel: ${context.channelId}`);
 					if (context.channelId) {
@@ -122,6 +123,7 @@ export default {
 					}
 					return {};
 				}
+				console.log(payload);
 			})
 			.event("member_joined_channel", async ({ payload }) => {
 				await client.chat.postEphemeral({
